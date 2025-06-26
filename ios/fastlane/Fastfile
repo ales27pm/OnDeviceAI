@@ -1,0 +1,86 @@
+# Fastlane Configuration for OnDeviceAI
+
+default_platform(:ios)
+
+platform :ios do
+  before_all do
+    setup_circle_ci if is_ci
+  end
+
+  desc "Run tests"
+  lane :test do
+    run_tests(
+      workspace: "OnDeviceAI.xcworkspace",
+      scheme: "OnDeviceAI",
+      clean: true
+    )
+  end
+
+  desc "Build app for testing"
+  lane :build_for_testing do
+    match(type: "appstore", readonly: true)
+    
+    build_app(
+      workspace: "OnDeviceAI.xcworkspace",
+      scheme: "OnDeviceAI",
+      configuration: "Release",
+      clean: true,
+      export_method: "app-store"
+    )
+  end
+
+  desc "Deploy to TestFlight"
+  lane :deploy_testflight do
+    match(type: "appstore", readonly: true)
+    
+    build_app(
+      workspace: "OnDeviceAI.xcworkspace", 
+      scheme: "OnDeviceAI",
+      configuration: "Release",
+      clean: true,
+      export_method: "app-store"
+    )
+    
+    upload_to_testflight(
+      skip_waiting_for_build_processing: true,
+      changelog: "New build from CI/CD pipeline"
+    )
+  end
+
+  desc "Deploy to App Store"
+  lane :deploy_appstore do
+    match(type: "appstore", readonly: true)
+    
+    build_app(
+      workspace: "OnDeviceAI.xcworkspace",
+      scheme: "OnDeviceAI", 
+      configuration: "Release",
+      clean: true,
+      export_method: "app-store"
+    )
+    
+    upload_to_app_store(
+      submit_for_review: false,
+      automatic_release: false,
+      force: true
+    )
+  end
+
+  desc "Create ad-hoc build"
+  lane :build_adhoc do
+    match(type: "adhoc", readonly: true)
+    
+    build_app(
+      workspace: "OnDeviceAI.xcworkspace",
+      scheme: "OnDeviceAI",
+      configuration: "Release", 
+      clean: true,
+      export_method: "ad-hoc"
+    )
+  end
+
+  error do |lane, exception|
+    # This block is called if there was an error
+    puts "Error in lane #{lane}: #{exception}"
+  end
+end

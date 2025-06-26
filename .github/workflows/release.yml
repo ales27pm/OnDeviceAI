@@ -1,0 +1,402 @@
+# Automated Release Management
+# Handles version bumping, changelog generation, and release creation
+
+name: 🎉 Release Management
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_type:
+        description: 'Release type'
+        required: true
+        default: 'patch'
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+          - prerelease
+          - beta
+      release_notes:
+        description: 'Additional release notes'
+        required: false
+      skip_ios_deploy:
+        description: 'Skip iOS deployment'
+        required: false
+        default: 'false'
+        type: boolean
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION: '20'
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+jobs:
+  # 🔍 Pre-release Validation
+  pre_release_validation:
+    name: 🔍 Pre-release Validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    outputs:
+      current_version: ${{ steps.current_version.outputs.version }}
+      new_version: ${{ steps.new_version.outputs.version }}
+      release_type: ${{ steps.release_type.outputs.type }}
+      
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          
+      - name: 📋 Get Current Version
+        id: current_version
+        run: |
+          CURRENT_VERSION=$(grep '"version"' package.json | sed 's/.*"version": "\(.*\)".*/\1/')
+          echo "version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+          echo "📦 Current Version: $CURRENT_VERSION"
+          
+      - name: 🎯 Determine Release Type
+        id: release_type
+        run: |
+          RELEASE_TYPE="${{ github.event.inputs.release_type }}"
+          echo "type=$RELEASE_TYPE" >> $GITHUB_OUTPUT
+          echo "🎯 Release Type: $RELEASE_TYPE"
+          
+      - name: 🔢 Calculate New Version
+        id: new_version
+        run: |
+          CURRENT="${{ steps.current_version.outputs.version }}"
+          TYPE="${{ steps.release_type.outputs.type }}"
+          
+          # Parse semantic version
+          if [[ $CURRENT =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)(-.*)?$ ]]; then
+            MAJOR=${BASH_REMATCH[1]}
+            MINOR=${BASH_REMATCH[2]}
+            PATCH=${BASH_REMATCH[3]}
+            PRERELEASE=${BASH_REMATCH[4]}
+          else
+            echo "❌ Invalid version format: $CURRENT"
+            exit 1
+          fi
+          
+          case "$TYPE" in
+            "major")
+              NEW_VERSION="$((MAJOR + 1)).0.0"
+              ;;
+            "minor")
+              NEW_VERSION="$MAJOR.$((MINOR + 1)).0"
+              ;;
+            "patch")
+              NEW_VERSION="$MAJOR.$MINOR.$((PATCH + 1))"
+              ;;
+            "prerelease")
+              if [[ -n $PRERELEASE ]]; then
+                # Increment prerelease number
+                if [[ $PRERELEASE =~ -([a-zA-Z]+)\.([0-9]+) ]]; then
+                  PREFIX=${BASH_REMATCH[1]}
+                  NUM=${BASH_REMATCH[2]}
+                  NEW_VERSION="$MAJOR.$MINOR.$PATCH-$PREFIX.$((NUM + 1))"
+                else
+                  NEW_VERSION="$MAJOR.$MINOR.$PATCH-alpha.1"
+                fi
+              else
+                NEW_VERSION="$MAJOR.$MINOR.$((PATCH + 1))-alpha.1"
+              fi
+              ;;
+            "beta")
+              NEW_VERSION="$MAJOR.$MINOR.$((PATCH + 1))-beta.1"
+              ;;
+          esac
+          
+          echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "🆕 New Version: $NEW_VERSION"
+          
+      - name: 🔍 Validate Branch
+        run: |
+          BRANCH="${{ github.ref_name }}"
+          RELEASE_TYPE="${{ steps.release_type.outputs.type }}"
+          
+          echo "🌿 Current Branch: $BRANCH"
+          echo "🎯 Release Type: $RELEASE_TYPE"
+          
+          # Validate release from correct branch
+          case "$RELEASE_TYPE" in
+            "major"|"minor"|"patch")
+              if [[ "$BRANCH" != "main" && "$BRANCH" != "master" ]]; then
+                echo "❌ Production releases must be from main/master branch"
+                exit 1
+              fi
+              ;;
+            "prerelease"|"beta")
+              if [[ "$BRANCH" != "develop" && "$BRANCH" != "main" && "$BRANCH" != "master" ]]; then
+                echo "❌ Pre-releases should be from develop, main, or master branch"
+                exit 1
+              fi
+              ;;
+          esac
+          
+          echo "✅ Branch validation passed"
+
+  # 🔄 Version Bump & Changelog
+  version_bump:
+    name: 🔄 Version Bump & Changelog
+    runs-on: ubuntu-latest
+    needs: pre_release_validation
+    
+    outputs:
+      changelog: ${{ steps.changelog.outputs.changelog }}
+      
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          
+      - name: 🥟 Install Bun
+        uses: oven-sh/setup-bun@v1
+        
+      - name: 📦 Install Dependencies
+        run: bun install --frozen-lockfile
+        
+      - name: 🔄 Update Version in Files
+        run: |
+          NEW_VERSION="${{ needs.pre_release_validation.outputs.new_version }}"
+          echo "🔄 Updating version to: $NEW_VERSION"
+          
+          # Update package.json
+          sed -i.bak "s/\"version\": \".*\"/\"version\": \"$NEW_VERSION\"/" package.json
+          
+          # Update iOS version
+          if [ -f ios/OnDeviceAI/Info.plist ]; then
+            /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $NEW_VERSION" ios/OnDeviceAI/Info.plist 2>/dev/null || true
+          fi
+          
+          # Update Android version
+          if [ -f android/app/build.gradle ]; then
+            sed -i.bak "s/versionName \".*\"/versionName \"$NEW_VERSION\"/" android/app/build.gradle
+          fi
+          
+          echo "✅ Version updated in all files"
+          
+      - name: 📝 Generate Changelog
+        id: changelog
+        run: |
+          echo "📝 Generating changelog..."
+          
+          # Get commits since last tag
+          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          if [ -n "$LAST_TAG" ]; then
+            COMMITS=$(git log $LAST_TAG..HEAD --pretty=format:"- %s (%h)" --no-merges)
+          else
+            COMMITS=$(git log --pretty=format:"- %s (%h)" --no-merges -10)
+          fi
+          
+          # Create changelog
+          CHANGELOG="## 🎉 Release ${{ needs.pre_release_validation.outputs.new_version }}
+          
+          ### 📅 Release Date
+          $(date +'%Y-%m-%d')
+          
+          ### 🚀 What's New
+          $COMMITS
+          
+          ### 🔧 Technical Details
+          - **Release Type**: ${{ needs.pre_release_validation.outputs.release_type }}
+          - **Previous Version**: ${{ needs.pre_release_validation.outputs.current_version }}
+          - **New Version**: ${{ needs.pre_release_validation.outputs.new_version }}
+          - **TurboModules**: ✅ Enabled
+          - **Performance Monitoring**: ✅ Included
+          
+          ### 📱 Platform Support
+          - **iOS**: ✅ Ready for TestFlight/App Store
+          - **React Native**: 0.79.2
+          - **Expo**: SDK 53
+          
+          ${{ github.event.inputs.release_notes && '### 📋 Additional Notes' || '' }}
+          ${{ github.event.inputs.release_notes || '' }}"
+          
+          # Save changelog
+          echo "$CHANGELOG" > RELEASE_CHANGELOG.md
+          
+          # Set output (escape newlines)
+          echo "changelog<<EOF" >> $GITHUB_OUTPUT
+          echo "$CHANGELOG" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+          
+      - name: 💾 Commit Version Changes
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          
+          git add package.json ios/OnDeviceAI/Info.plist android/app/build.gradle RELEASE_CHANGELOG.md
+          git commit -m "🔖 Bump version to ${{ needs.pre_release_validation.outputs.new_version }}"
+          git push
+          
+      - name: 📤 Upload Changelog
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-changelog
+          path: RELEASE_CHANGELOG.md
+          retention-days: 90
+
+  # 🏷️ Create Release
+  create_release:
+    name: 🏷️ Create GitHub Release
+    runs-on: ubuntu-latest
+    needs: [pre_release_validation, version_bump]
+    
+    outputs:
+      release_id: ${{ steps.create_release.outputs.id }}
+      release_url: ${{ steps.create_release.outputs.html_url }}
+      
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
+          
+      - name: 🏷️ Create Git Tag
+        run: |
+          NEW_VERSION="${{ needs.pre_release_validation.outputs.new_version }}"
+          RELEASE_TYPE="${{ needs.pre_release_validation.outputs.release_type }}"
+          
+          # Create appropriate tag
+          case "$RELEASE_TYPE" in
+            "beta")
+              TAG="v$NEW_VERSION"
+              ;;
+            "prerelease")
+              TAG="v$NEW_VERSION"
+              ;;
+            *)
+              TAG="v$NEW_VERSION"
+              ;;
+          esac
+          
+          echo "🏷️ Creating tag: $TAG"
+          
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git tag -a "$TAG" -m "Release $NEW_VERSION"
+          git push origin "$TAG"
+          
+      - name: 🎉 Create GitHub Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ needs.pre_release_validation.outputs.new_version }}
+          release_name: 🎉 OnDeviceAI v${{ needs.pre_release_validation.outputs.new_version }}
+          body: ${{ needs.version_bump.outputs.changelog }}
+          draft: false
+          prerelease: ${{ contains(needs.pre_release_validation.outputs.release_type, 'beta') || contains(needs.pre_release_validation.outputs.release_type, 'prerelease') }}
+
+  # 📱 Trigger iOS Deployment
+  trigger_ios_deploy:
+    name: 📱 Trigger iOS Deployment
+    runs-on: ubuntu-latest
+    needs: [pre_release_validation, create_release]
+    if: github.event.inputs.skip_ios_deploy != 'true'
+    
+    steps:
+      - name: 🚀 Trigger iOS Deployment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const releaseType = '${{ needs.pre_release_validation.outputs.release_type }}';
+            let deploymentType = 'testflight';
+            
+            if (releaseType === 'major' || releaseType === 'minor') {
+              deploymentType = 'appstore';
+            } else if (releaseType === 'patch') {
+              deploymentType = 'testflight';
+            } else {
+              deploymentType = 'testflight';
+            }
+            
+            const result = await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'ios-deploy.yml',
+              ref: 'v${{ needs.pre_release_validation.outputs.new_version }}',
+              inputs: {
+                deployment_type: deploymentType,
+                build_number: context.runNumber.toString(),
+                skip_tests: 'false'
+              }
+            });
+            
+            console.log('🚀 iOS deployment triggered:', deploymentType);
+
+  # 📊 Release Summary
+  release_summary:
+    name: 📊 Release Summary
+    runs-on: ubuntu-latest
+    needs: [pre_release_validation, version_bump, create_release, trigger_ios_deploy]
+    if: always()
+    
+    steps:
+      - name: 📊 Generate Release Summary
+        run: |
+          echo "# 🎉 Release Summary" > release-summary.md
+          echo "" >> release-summary.md
+          echo "## 📋 Release Details" >> release-summary.md
+          echo "" >> release-summary.md
+          echo "| Field | Value |" >> release-summary.md
+          echo "|-------|-------|" >> release-summary.md
+          echo "| Previous Version | ${{ needs.pre_release_validation.outputs.current_version }} |" >> release-summary.md
+          echo "| New Version | ${{ needs.pre_release_validation.outputs.new_version }} |" >> release-summary.md
+          echo "| Release Type | ${{ needs.pre_release_validation.outputs.release_type }} |" >> release-summary.md
+          echo "| Release URL | ${{ needs.create_release.outputs.release_url }} |" >> release-summary.md
+          echo "| iOS Deployment | ${{ github.event.inputs.skip_ios_deploy != 'true' && '✅ Triggered' || '⏭️ Skipped' }} |" >> release-summary.md
+          echo "" >> release-summary.md
+          echo "## 📊 Pipeline Status" >> release-summary.md
+          echo "" >> release-summary.md
+          echo "| Stage | Status |" >> release-summary.md
+          echo "|-------|--------|" >> release-summary.md
+          echo "| Pre-release Validation | ${{ needs.pre_release_validation.result == 'success' && '✅ Success' || '❌ Failed' }} |" >> release-summary.md
+          echo "| Version Bump | ${{ needs.version_bump.result == 'success' && '✅ Success' || '❌ Failed' }} |" >> release-summary.md
+          echo "| Create Release | ${{ needs.create_release.result == 'success' && '✅ Success' || '❌ Failed' }} |" >> release-summary.md
+          echo "| iOS Deployment | ${{ needs.trigger_ios_deploy.result == 'success' && '✅ Triggered' || (needs.trigger_ios_deploy.result == 'skipped' && '⏭️ Skipped' || '❌ Failed') }} |" >> release-summary.md
+          echo "" >> release-summary.md
+          echo "## 🎯 Next Steps" >> release-summary.md
+          echo "" >> release-summary.md
+          echo "1. 📱 Monitor iOS deployment pipeline" >> release-summary.md
+          echo "2. 🧪 Test the release in TestFlight" >> release-summary.md
+          echo "3. 📝 Update release notes if needed" >> release-summary.md
+          echo "4. 🎉 Announce the release" >> release-summary.md
+          echo "" >> release-summary.md
+          echo "---" >> release-summary.md
+          echo "*Generated on $(date -u +"%Y-%m-%d %H:%M:%S UTC")*" >> release-summary.md
+          
+      - name: 📤 Upload Release Summary
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-summary
+          path: release-summary.md
+          retention-days: 180
+
+      - name: 🎉 Success Notification
+        if: needs.create_release.result == 'success'
+        run: |
+          echo "🎉 Release created successfully!"
+          echo "📦 Version: ${{ needs.pre_release_validation.outputs.new_version }}"
+          echo "🔗 Release URL: ${{ needs.create_release.outputs.release_url }}"
+          echo "📱 iOS Deployment: ${{ github.event.inputs.skip_ios_deploy != 'true' && 'Triggered' || 'Skipped' }}"

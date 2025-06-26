@@ -1,0 +1,168 @@
+name: ✨ Feature Request
+description: Suggest a new feature or enhancement for OnDeviceAI
+title: "[Feature]: "
+labels: ["enhancement", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting a new feature! Please provide as much detail as possible.
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Pre-submission Checklist
+      description: Please verify the following before submitting
+      options:
+        - label: I have searched existing issues to avoid duplicates
+          required: true
+        - label: This is a feature request, not a bug report
+          required: true
+        - label: I have provided a clear use case for this feature
+          required: true
+
+  - type: textarea
+    id: feature-description
+    attributes:
+      label: ✨ Feature Description
+      description: A clear and concise description of the feature you'd like to see
+      placeholder: Describe the feature...
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: 🎯 Problem/Use Case
+      description: What problem does this feature solve? What's the use case?
+      placeholder: "As a user, I want to... so that I can..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: 💡 Proposed Solution
+      description: How do you envision this feature working?
+      placeholder: Describe your proposed solution...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: platform
+    attributes:
+      label: 📱 Target Platform
+      description: Which platform(s) should this feature target?
+      options:
+        - iOS
+        - Android
+        - Web
+        - All platforms
+        - Platform agnostic
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: 🚨 Priority
+      description: How important is this feature to you?
+      options:
+        - Critical (Must have)
+        - High (Very important)
+        - Medium (Nice to have)
+        - Low (Enhancement)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: 🎯 Feature Category
+      description: Which area does this feature belong to?
+      options:
+        - Voice/Speech features
+        - Chat functionality
+        - User interface
+        - Performance
+        - Settings/Configuration
+        - Accessibility
+        - Integration
+        - Developer experience
+        - Security/Privacy
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: 🔄 Alternative Solutions
+      description: What alternative solutions have you considered?
+      placeholder: Describe any alternative approaches...
+
+  - type: textarea
+    id: examples
+    attributes:
+      label: 📱 Examples/References
+      description: Are there any apps or examples that implement this feature well?
+      placeholder: Link to examples or describe similar implementations...
+
+  - type: checkboxes
+    id: implementation-areas
+    attributes:
+      label: 🛠️ Implementation Areas
+      description: Which parts of the app would this feature likely affect?
+      options:
+        - label: Frontend/UI components
+        - label: Voice processing
+        - label: Chat engine
+        - label: State management
+        - label: API integrations
+        - label: TurboModules/Native code
+        - label: Performance monitoring
+        - label: Database/Storage
+        - label: Networking
+        - label: Authentication
+        - label: Analytics
+        - label: Testing
+
+  - type: dropdown
+    id: complexity
+    attributes:
+      label: 🔧 Estimated Complexity
+      description: How complex do you think this feature would be to implement?
+      options:
+        - Simple (Small UI change, configuration option)
+        - Medium (New component, moderate logic)
+        - Complex (New major feature, multiple components)
+        - Very Complex (Architectural changes, extensive integration)
+        - Unknown
+
+  - type: textarea
+    id: acceptance-criteria
+    attributes:
+      label: ✅ Acceptance Criteria
+      description: What would need to be true for this feature to be considered complete?
+      placeholder: |
+        - [ ] User can...
+        - [ ] The feature should...
+        - [ ] Error handling includes...
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: 📝 Additional Context
+      description: Any additional information, mockups, or context
+      placeholder: Add any other context, screenshots, or mockups...
+
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: 🤝 Contribution
+      description: Are you interested in contributing to this feature?
+      options:
+        - label: I would be willing to contribute to implementing this feature
+        - label: I can help with testing this feature
+        - label: I can provide detailed feedback during development
+        - label: I have relevant expertise in this area

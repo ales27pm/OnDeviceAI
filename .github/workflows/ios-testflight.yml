@@ -1,0 +1,121 @@
+# .github/workflows/ios-testflight.yml
+# Production build and TestFlight upload workflow
+# Requires code signing certificates and TestFlight credentials
+
+name: iOS TestFlight Deploy
+
+# Only trigger on release tags or manual dispatch
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      build_number:
+        description: 'Build number for this release'
+        required: true
+        default: '1'
+
+jobs:
+  testflight_deploy:
+    name: Build & Deploy to TestFlight
+    runs-on: macos-latest
+    timeout-minutes: 60
+    
+    env:
+      RCT_NEW_ARCH_ENABLED: "1"
+      FASTLANE_SKIP_UPDATE_CHECK: "1"
+      
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Setup Ruby & Bundler
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2'
+          bundler-cache: true
+          working-directory: ios
+          
+      - name: Install Bun
+        run: |
+          curl -fsSL https://bun.sh/install | bash
+          echo "$HOME/.bun/bin" >> $GITHUB_PATH
+          
+      - name: Install Dependencies
+        run: |
+          bun install --frozen-lockfile
+          bun run codegen
+          
+      - name: Install CocoaPods
+        working-directory: ios
+        run: |
+          bundle install
+          RCT_NEW_ARCH_ENABLED=1 bundle exec pod install
+        env:
+          RCT_NEW_ARCH_ENABLED: "1"
+          
+      # Code signing setup (requires secrets)
+      - name: Setup Code Signing
+        env:
+          APPLE_ID: ${{ secrets.FASTLANE_APPLE_ID }}
+          APP_STORE_CONNECT_TEAM_ID: ${{ secrets.APP_STORE_CONNECT_TEAM_ID }}
+          DEVELOPER_TEAM_ID: ${{ secrets.DEVELOPER_TEAM_ID }}
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+          FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD: ${{ secrets.FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD }}
+        run: |
+          echo "🔐 Setting up code signing..."
+          # This step would typically run `bundle exec fastlane match`
+          # Requires proper Fastlane setup with certificates
+          
+      - name: Build & Archive for TestFlight
+        working-directory: ios
+        env:
+          FASTLANE_APPLE_ID: ${{ secrets.FASTLANE_APPLE_ID }}
+          FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD: ${{ secrets.FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD }}
+          APP_STORE_CONNECT_TEAM_ID: ${{ secrets.APP_STORE_CONNECT_TEAM_ID }}
+          DEVELOPER_TEAM_ID: ${{ secrets.DEVELOPER_TEAM_ID }}
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+        run: |
+          echo "🏗️ Building production archive..."
+          
+          # Build archive using xcodebuild
+          xcodebuild archive \
+            -workspace OnDeviceAI.xcworkspace \
+            -scheme OnDeviceAI \
+            -configuration Release \
+            -archivePath build/OnDeviceAI.xcarchive \
+            -destination "generic/platform=iOS" \
+            -allowProvisioningUpdates \
+            CODE_SIGN_STYLE=Automatic \
+            DEVELOPMENT_TEAM="${{ secrets.DEVELOPER_TEAM_ID }}"
+            
+          # Export IPA
+          xcodebuild -exportArchive \
+            -archivePath build/OnDeviceAI.xcarchive \
+            -exportPath build/ \
+            -exportOptionsPlist exportOptions.plist
+            
+      - name: Upload to TestFlight
+        working-directory: ios
+        env:
+          FASTLANE_APPLE_ID: ${{ secrets.FASTLANE_APPLE_ID }}
+          FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD: ${{ secrets.FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD }}
+        run: |
+          echo "🚀 Uploading to TestFlight..."
+          
+          # Upload using altool or Transporter
+          xcrun altool --upload-app \
+            --type ios \
+            --file "build/OnDeviceAI.ipa" \
+            --username "${{ secrets.FASTLANE_APPLE_ID }}" \
+            --password "${{ secrets.FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD }}"
+            
+      - name: Archive Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-build
+          path: |
+            ios/build/OnDeviceAI.xcarchive
+            ios/build/*.ipa
+          retention-days: 30

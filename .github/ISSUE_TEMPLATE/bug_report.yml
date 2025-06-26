@@ -1,0 +1,168 @@
+name: 🐛 Bug Report
+description: Report a bug or issue with the OnDeviceAI app
+title: "[Bug]: "
+labels: ["bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug! Please fill out this form as completely as possible.
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Pre-submission Checklist
+      description: Please verify the following before submitting
+      options:
+        - label: I have searched existing issues to avoid duplicates
+          required: true
+        - label: I have tested this on the latest version
+          required: true
+        - label: I have provided all requested information
+          required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: 🐛 Bug Description
+      description: A clear and concise description of what the bug is
+      placeholder: Describe the bug...
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: 🔄 Steps to Reproduce
+      description: Steps to reproduce the behavior
+      placeholder: |
+        1. Go to '...'
+        2. Tap on '...'
+        3. Scroll down to '...'
+        4. See error
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: ✅ Expected Behavior
+      description: What you expected to happen
+      placeholder: Describe what should happen...
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: ❌ Actual Behavior
+      description: What actually happened
+      placeholder: Describe what actually happened...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: platform
+    attributes:
+      label: 📱 Platform
+      description: Which platform are you using?
+      options:
+        - iOS
+        - Android
+        - Web
+        - Multiple platforms
+    validations:
+      required: true
+
+  - type: input
+    id: device
+    attributes:
+      label: 📱 Device/Simulator
+      description: What device or simulator are you using?
+      placeholder: "iPhone 15 Pro, iPad Air, iPhone Simulator, etc."
+    validations:
+      required: true
+
+  - type: input
+    id: os-version
+    attributes:
+      label: 🔢 OS Version
+      description: What OS version are you running?
+      placeholder: "iOS 17.2, Android 14, etc."
+    validations:
+      required: true
+
+  - type: input
+    id: app-version
+    attributes:
+      label: 📦 App Version
+      description: What version of the app are you using?
+      placeholder: "1.0.0, 1.2.3-beta, etc."
+    validations:
+      required: true
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: 🚨 Severity
+      description: How severe is this bug?
+      options:
+        - Critical (App crashes/unusable)
+        - High (Major feature broken)
+        - Medium (Minor feature issue)
+        - Low (Cosmetic/UI issue)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: frequency
+    attributes:
+      label: 🔄 Frequency
+      description: How often does this occur?
+      options:
+        - Always (100% of the time)
+        - Often (>50% of the time)
+        - Sometimes (25-50% of the time)
+        - Rarely (<25% of the time)
+        - Once (Only happened once)
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: 📋 Console Logs/Error Messages
+      description: Any relevant console logs or error messages
+      placeholder: Paste console output here...
+      render: shell
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: 📝 Additional Context
+      description: Any additional context or information
+      placeholder: Add any other context about the problem here...
+
+  - type: checkboxes
+    id: feature-areas
+    attributes:
+      label: 🎯 Affected Features
+      description: Which features are affected? (Check all that apply)
+      options:
+        - label: Voice interaction/Speech recognition
+        - label: Chat functionality
+        - label: Settings/Configuration
+        - label: Performance monitoring
+        - label: Conversation management
+        - label: Onboarding flow
+        - label: Network/Offline functionality
+        - label: TurboModules
+        - label: UI/Animation
+        - label: Other (specify in additional context)
+
+  - type: textarea
+    id: workaround
+    attributes:
+      label: 🔧 Workaround
+      description: Any workaround you've found
+      placeholder: Describe any temporary workaround...

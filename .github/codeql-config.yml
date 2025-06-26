@@ -1,0 +1,49 @@
+# CodeQL Configuration for Enhanced Security Analysis
+name: "Enhanced CodeQL Config"
+
+# Disable default queries and enable security-focused ones
+disable-default-queries: false
+
+# Additional query suites
+queries:
+  - name: security-extended
+    uses: security-extended
+  - name: security-and-quality
+    uses: security-and-quality
+
+# Custom query paths
+query-filters:
+  - exclude:
+      id: js/unused-local-variable
+  - include:
+      tags:
+        - security
+        - correctness
+
+# Path filters
+paths-ignore:
+  - node_modules/**
+  - ios/Pods/**
+  - build/**
+  - dist/**
+  - coverage/**
+  - "**/*.test.ts"
+  - "**/*.test.tsx"
+  - "**/*.spec.ts"
+  - "**/*.spec.tsx"
+
+paths:
+  - src/**
+  - ios/**/*.swift
+  - ios/**/*.m
+  - ios/**/*.mm
+
+# Database configuration
+database:
+  # Specify the languages to analyze
+  languages:
+    - javascript
+    - typescript
+  
+  # Build configuration
+  build-mode: autobuild

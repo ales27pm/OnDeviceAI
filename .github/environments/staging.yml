@@ -1,0 +1,12 @@
+# Staging Environment Configuration
+name: staging
+url: https://staging.ondeviceai.app
+reviewers:
+  - type: user
+    name: maintainer
+protection_rules:
+  - type: branch_policy
+    branch_pattern: develop
+deployment_branch_policy:
+  protected_branches: false
+  custom_branch_policies: true

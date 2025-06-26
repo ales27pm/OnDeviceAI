@@ -1,0 +1,117 @@
+{
+  "expo": {
+    "name": "OnDeviceAI",
+    "slug": "ondeviceai",
+    "scheme": "ondeviceai",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.ondeviceai.app",
+      "buildNumber": "1",
+      "infoPlist": {
+        "LSApplicationCategoryType": "public.app-category.productivity",
+        "NSCalendarsUsageDescription": "OnDeviceAI needs calendar access to schedule events and manage your appointments through intelligent conversation. All processing happens locally on your device for privacy.",
+        "NSContactsUsageDescription": "OnDeviceAI needs contacts access to find people when scheduling meetings and events through conversation. Contact information is processed entirely on-device.",
+        "NSMicrophoneUsageDescription": "OnDeviceAI uses microphone access for intelligent voice conversations and commands. All voice processing occurs locally on your device using iOS Speech Recognition for maximum privacy and security.",
+        "NSSpeechRecognitionUsageDescription": "OnDeviceAI uses speech recognition to understand your voice commands and enable natural conversation with the AI assistant. Speech processing happens entirely on-device for privacy and performance.",
+        "NSPhotoLibraryUsageDescription": "OnDeviceAI can access photos to help you organize and find images through intelligent conversation.",
+        "NSCameraUsageDescription": "OnDeviceAI can use the camera to take photos and assist with visual tasks when requested.",
+        "NSLocationWhenInUseUsageDescription": "OnDeviceAI uses location to provide context-aware assistance and location-based reminders.",
+        "NSRemindersUsageDescription": "OnDeviceAI can create and manage reminders to help you stay organized through natural conversation.",
+        "NSFaceIDUsageDescription": "OnDeviceAI can use Face ID for secure authentication when accessing sensitive information.",
+        "NSPrivacyTracking": false,
+        "NSPrivacyTrackingDomains": []
+      },
+      "appPrivacy": {
+        "dataCollected": "none",
+        "dataLinked": "none", 
+        "tracking": "none",
+        "privacyPolicyUrl": "https://ondeviceai.app/privacy",
+        "dataTypes": {
+          "contact": {
+            "collected": false,
+            "linkedToUser": false,
+            "usedForTracking": false,
+            "purposes": [],
+            "description": "Contact information is accessed only for scheduling functionality and processed entirely on-device."
+          },
+          "calendar": {
+            "collected": false,
+            "linkedToUser": false,
+            "usedForTracking": false,
+            "purposes": [],
+            "description": "Calendar data is accessed only for event management and processed entirely on-device."
+          },
+          "usage": {
+            "collected": false,
+            "linkedToUser": false,
+            "usedForTracking": false,
+            "purposes": [],
+            "description": "App usage is monitored for performance optimization only. No data leaves the device."
+          }
+        },
+        "thirdPartyServices": {
+          "openai": {
+            "name": "OpenAI API",
+            "purpose": "AI text processing",
+            "dataShared": "User queries only when explicitly requested",
+            "privacyPolicy": "https://openai.com/privacy/"
+          },
+          "anthropic": {
+            "name": "Anthropic API", 
+            "purpose": "AI text processing",
+            "dataShared": "User queries only when explicitly requested",
+            "privacyPolicy": "https://www.anthropic.com/privacy"
+          }
+        }
+      }
+    },
+    "android": {
+      "edgeToEdgeEnabled": true,
+      "package": "com.ondeviceai.app",
+      "versionCode": 1,
+      "permissions": [
+        "android.permission.READ_CALENDAR",
+        "android.permission.WRITE_CALENDAR",
+        "android.permission.READ_CONTACTS",
+        "android.permission.WRITE_CONTACTS",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.CAMERA",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.CALL_PHONE",
+        "android.permission.READ_PHONE_STATE",
+        "android.permission.READ_SMS",
+        "android.permission.SEND_SMS",
+        "android.permission.READ_CALL_LOG",
+        "android.permission.WRITE_CALL_LOG"
+      ],
+      "privacy": {
+        "dataCollected": "none",
+        "tracking": "none",
+        "permissions": {
+          "calendar": {
+            "purpose": "Schedule events and manage appointments through AI conversation",
+            "dataProcessing": "on-device-only"
+          },
+          "contacts": {
+            "purpose": "Find people for meeting invitations and scheduling",
+            "dataProcessing": "on-device-only"
+          }
+        }
+      }
+    },
+    "privacy": {
+      "analytics": false,
+      "crashReporting": false,
+      "tracking": false,
+      "dataCollection": "none",
+      "description": "OnDeviceAI is built with privacy-first principles. All AI processing occurs locally on your device using Core ML and on-device models. No conversations, personal data, or usage information is transmitted to external servers."
+    }
+  }
+}

@@ -1,0 +1,71 @@
+# SSH Config Template for OnDeviceAI Remote Development
+# Copy this to ~/.ssh/config and customize for your setup
+
+# === MacStadium Example ===
+Host macstadium-dev
+  HostName your-server.macstadium.com
+  User macuser
+  Port 22
+  IdentityFile ~/.ssh/macstadium_rsa
+  ServerAliveInterval 60
+  ServerAliveCountMax 3
+  TCPKeepAlive yes
+  Compression yes
+
+# === Mac-in-Cloud Example ===
+Host macincloud-dev
+  HostName your-server.macincloud.com
+  User macuser
+  Port 22
+  IdentityFile ~/.ssh/macincloud_rsa
+  ServerAliveInterval 60
+  ForwardAgent yes
+
+# === AWS EC2 Mac Example ===
+Host aws-mac-dev
+  HostName ec2-xxx-xxx-xxx-xxx.compute-1.amazonaws.com
+  User ec2-user
+  Port 22
+  IdentityFile ~/.ssh/aws-mac-key.pem
+  ServerAliveInterval 60
+
+# === Local Network Mac Example ===
+Host local-mac-dev
+  HostName 192.168.1.100
+  User macuser
+  Port 22
+  IdentityFile ~/.ssh/id_rsa
+  ServerAliveInterval 30
+
+# === Development Environment ===
+Host ondeviceai-mac
+  HostName your-mac-host.com
+  User macuser
+  Port 22
+  IdentityFile ~/.ssh/id_rsa
+  
+  # Keep connection alive
+  ServerAliveInterval 60
+  ServerAliveCountMax 3
+  TCPKeepAlive yes
+  
+  # Optimize for development
+  Compression yes
+  ForwardAgent yes
+  
+  # USB forwarding support (if using usbip)
+  LocalForward 3240 localhost:3240
+  
+  # Screen sharing port forwarding (optional)
+  LocalForward 5900 localhost:5900
+
+# === Quick Aliases ===
+Host mac
+  HostName your-mac-host.com
+  User macuser
+  IdentityFile ~/.ssh/id_rsa
+
+Host dev
+  HostName your-mac-host.com
+  User macuser
+  IdentityFile ~/.ssh/id_rsa

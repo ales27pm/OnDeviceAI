@@ -1,0 +1,92 @@
+{
+  "// VS Code Remote-SSH Settings for OnDeviceAI Development": "",
+  
+  "files.watcherExclude": {
+    "**/node_modules/**": true,
+    "**/ios/build/**": true,
+    "**/ios/Pods/**": true,
+    "**/android/build/**": true,
+    "**/build/**": true,
+    "**/.expo/**": true
+  },
+  
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/ios/build": true,
+    "**/ios/Pods": true,
+    "**/android/build": true,
+    "**/build": true,
+    "**/.expo": true
+  },
+  
+  "typescript.preferences.includePackageJsonAutoImports": "on",
+  "typescript.suggest.autoImports": true,
+  "typescript.updateImportsOnFileMove.enabled": "always",
+  
+  "eslint.workingDirectories": ["./src"],
+  "eslint.validate": [
+    "javascript",
+    "javascriptreact",
+    "typescript",
+    "typescriptreact"
+  ],
+  
+  "emmet.includeLanguages": {
+    "typescript": "typescriptreact",
+    "javascript": "javascriptreact"
+  },
+  
+  "files.associations": {
+    "*.tsx": "typescriptreact",
+    "*.ts": "typescript",
+    "Podfile": "ruby",
+    "*.podspec": "ruby"
+  },
+  
+  "terminal.integrated.env.osx": {
+    "RCT_NEW_ARCH_ENABLED": "1"
+  },
+  
+  "tasks.options": {
+    "cwd": "${workspaceFolder}"
+  },
+  
+  "// React Native specific settings": "",
+  "reactNative.packager.port": 8081,
+  "reactNative.android.runArguments.simulator": ["--no-packager"],
+  "reactNative.ios.runArguments.device": ["--no-packager"],
+  
+  "// TurboModule development": "",
+  "files.associations": {
+    "*.h": "objective-c",
+    "*.m": "objective-c",
+    "*.mm": "objective-cpp"
+  },
+  
+  "// Exclude generated files from search": "",
+  "files.exclude": {
+    "**/build/generated/**": true,
+    "**/ios/build/**": true,
+    "**/DerivedData/**": true
+  },
+  
+  "// Auto-save for fast development": "",
+  "files.autoSave": "afterDelay",
+  "files.autoSaveDelay": 1000,
+  
+  "// Git settings for remote work": "",
+  "git.enableSmartCommit": true,
+  "git.confirmSync": false,
+  "git.autofetch": true,
+  
+  "// Extension recommendations": "",
+  "extensions.recommendations": [
+    "ms-vscode-remote.remote-ssh",
+    "bradlc.vscode-tailwindcss",
+    "esbenp.prettier-vscode",
+    "ms-vscode.vscode-typescript-next",
+    "formulahendry.auto-rename-tag",
+    "christian-kohler.path-intellisense",
+    "ms-vscode.vscode-json"
+  ]
+}

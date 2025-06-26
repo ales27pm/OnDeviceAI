@@ -1,0 +1,16 @@
+# Production Environment Configuration  
+name: production
+url: https://ondeviceai.app
+reviewers:
+  - type: user
+    name: maintainer
+  - type: team
+    name: core-team
+protection_rules:
+  - type: required_reviewers
+    count: 1
+  - type: wait_timer
+    minutes: 5
+deployment_branch_policy:
+  protected_branches: true
+  custom_branch_policies: false

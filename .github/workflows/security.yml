@@ -1,0 +1,526 @@
+# Security Scanning and Compliance
+# Comprehensive security analysis and vulnerability management
+
+name: 🔒 Security & Compliance
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    # Run security scans daily at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      scan_type:
+        description: 'Type of security scan'
+        required: true
+        default: 'comprehensive'
+        type: choice
+        options:
+          - comprehensive
+          - dependencies
+          - secrets
+          - code_analysis
+          - compliance
+
+concurrency:
+  group: security-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  # 🔍 Dependency Vulnerability Scanning
+  dependency_scan:
+    name: 🔍 Dependency Vulnerabilities
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    if: |
+      github.event.inputs.scan_type == 'comprehensive' ||
+      github.event.inputs.scan_type == 'dependencies' ||
+      github.event.inputs.scan_type == ''
+    
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+        
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          
+      - name: 🥟 Install Bun
+        uses: oven-sh/setup-bun@v1
+        
+      - name: 📦 Install Dependencies
+        run: bun install --frozen-lockfile
+        
+      - name: 🔍 Audit JavaScript Dependencies
+        run: |
+          echo "🔍 Scanning JavaScript dependencies..."
+          
+          # Bun audit
+          bun audit --audit-level moderate --json > bun-audit.json || true
+          
+          # Parse and format results
+          if [ -f bun-audit.json ]; then
+            echo "📊 Bun Audit Results:"
+            cat bun-audit.json | head -20
+          fi
+          
+      - name: 🔍 OWASP Dependency Check
+        uses: dependency-check/Dependency-Check_Action@main
+        id: depcheck
+        with:
+          project: 'OnDeviceAI'
+          path: '.'
+          format: 'ALL'
+          args: >
+            --enableRetired
+            --enableExperimental
+            --failOnCVSS 7
+            --exclude "**/node_modules/**"
+            --exclude "**/ios/Pods/**"
+          
+      - name: 📊 Parse Dependency Results
+        run: |
+          echo "📊 Dependency Scan Summary" > dependency-report.md
+          echo "==========================" >> dependency-report.md
+          echo "" >> dependency-report.md
+          
+          if [ -f reports/dependency-check-report.json ]; then
+            # Parse JSON report and extract key information
+            VULNERABILITIES=$(cat reports/dependency-check-report.json | jq '.dependencies[]?.vulnerabilities[]?' 2>/dev/null | wc -l || echo "0")
+            echo "- **Total Vulnerabilities Found**: $VULNERABILITIES" >> dependency-report.md
+            echo "" >> dependency-report.md
+            
+            # Extract high severity vulnerabilities
+            HIGH_VULN=$(cat reports/dependency-check-report.json | jq '.dependencies[]?.vulnerabilities[]? | select(.severity == "HIGH")' 2>/dev/null | wc -l || echo "0")
+            MEDIUM_VULN=$(cat reports/dependency-check-report.json | jq '.dependencies[]?.vulnerabilities[]? | select(.severity == "MEDIUM")' 2>/dev/null | wc -l || echo "0")
+            
+            echo "- **High Severity**: $HIGH_VULN" >> dependency-report.md
+            echo "- **Medium Severity**: $MEDIUM_VULN" >> dependency-report.md
+            echo "" >> dependency-report.md
+          else
+            echo "- **Status**: ✅ No vulnerabilities detected" >> dependency-report.md
+            echo "" >> dependency-report.md
+          fi
+          
+          echo "## 🔧 Recommendations" >> dependency-report.md
+          echo "" >> dependency-report.md
+          echo "1. 📦 Keep dependencies updated regularly" >> dependency-report.md
+          echo "2. 🔍 Review and address high-severity vulnerabilities" >> dependency-report.md
+          echo "3. 🛡️ Consider using dependency lock files" >> dependency-report.md
+          echo "4. 🚫 Remove unused dependencies" >> dependency-report.md
+          
+      - name: 📤 Upload Dependency Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependency-scan-results
+          path: |
+            reports/
+            dependency-report.md
+            bun-audit.json
+          retention-days: 30
+
+  # 🔐 Secrets Scanning
+  secrets_scan:
+    name: 🔐 Secrets & Credentials Scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    if: |
+      github.event.inputs.scan_type == 'comprehensive' ||
+      github.event.inputs.scan_type == 'secrets' ||
+      github.event.inputs.scan_type == ''
+    
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          
+      - name: 🔍 TruffleHog Secrets Scan
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: main
+          head: HEAD
+          extra_args: --debug --only-verified
+          
+      - name: 🔍 Manual Secrets Patterns
+        run: |
+          echo "🔍 Scanning for potential secrets and sensitive data..."
+          
+          # Create secrets scan report
+          echo "# 🔐 Secrets Scan Report" > secrets-report.md
+          echo "" >> secrets-report.md
+          
+          # Common secret patterns
+          PATTERNS=(
+            "api[_-]?key"
+            "secret[_-]?key"
+            "access[_-]?token"
+            "auth[_-]?token"
+            "password"
+            "passwd"
+            "private[_-]?key"
+            "client[_-]?secret"
+            "aws[_-]?access"
+            "bearer[[:space:]]"
+          )
+          
+          FOUND_SECRETS=false
+          
+          for pattern in "${PATTERNS[@]}"; do
+            RESULTS=$(grep -r -i -n "$pattern" --include="*.ts" --include="*.tsx" --include="*.js" --include="*.jsx" --exclude-dir=node_modules --exclude-dir=.git . || true)
+            
+            if [ -n "$RESULTS" ]; then
+              echo "## ⚠️ Pattern: $pattern" >> secrets-report.md
+              echo '```' >> secrets-report.md
+              echo "$RESULTS" >> secrets-report.md
+              echo '```' >> secrets-report.md
+              echo "" >> secrets-report.md
+              FOUND_SECRETS=true
+            fi
+          done
+          
+          if [ "$FOUND_SECRETS" = false ]; then
+            echo "## ✅ No Obvious Secrets Found" >> secrets-report.md
+            echo "" >> secrets-report.md
+            echo "No common secret patterns were detected in the codebase." >> secrets-report.md
+          else
+            echo "## 🔧 Recommendations" >> secrets-report.md
+            echo "" >> secrets-report.md
+            echo "1. 🔐 Move secrets to environment variables" >> secrets-report.md
+            echo "2. 🗝️ Use GitHub Secrets for CI/CD" >> secrets-report.md
+            echo "3. 🔄 Rotate any exposed credentials" >> secrets-report.md
+            echo "4. 📝 Review .gitignore for sensitive files" >> secrets-report.md
+          fi
+          
+      - name: 📤 Upload Secrets Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: secrets-scan-results
+          path: secrets-report.md
+          retention-days: 30
+
+  # 🔬 Static Code Analysis
+  code_analysis:
+    name: 🔬 Static Code Analysis
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    if: |
+      github.event.inputs.scan_type == 'comprehensive' ||
+      github.event.inputs.scan_type == 'code_analysis' ||
+      github.event.inputs.scan_type == ''
+    
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          
+      - name: 🔍 Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: javascript, typescript
+          config-file: ./.github/codeql-config.yml
+          
+      - name: 🏗️ Autobuild
+        uses: github/codeql-action/autobuild@v3
+        
+      - name: 🔬 Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:javascript"
+          
+      - name: 🟢 Setup Node.js for ESLint Security
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          
+      - name: 🥟 Install Bun
+        uses: oven-sh/setup-bun@v1
+        
+      - name: 📦 Install Dependencies
+        run: bun install --frozen-lockfile
+        
+      - name: 🔍 ESLint Security Analysis
+        run: |
+          echo "🔍 Running ESLint security analysis..."
+          
+          # Install security plugins
+          bun add -D eslint-plugin-security eslint-plugin-no-secrets
+          
+          # Create security-focused ESLint config
+          cat > .eslintrc.security.js << EOF
+          module.exports = {
+            extends: [
+              './.eslintrc.js'
+            ],
+            plugins: [
+              'security',
+              'no-secrets'
+            ],
+            rules: {
+              'security/detect-object-injection': 'error',
+              'security/detect-non-literal-regexp': 'error',
+              'security/detect-unsafe-regex': 'error',
+              'security/detect-buffer-noassert': 'error',
+              'security/detect-child-process': 'error',
+              'security/detect-disable-mustache-escape': 'error',
+              'security/detect-eval-with-expression': 'error',
+              'security/detect-no-csrf-before-method-override': 'error',
+              'security/detect-non-literal-fs-filename': 'error',
+              'security/detect-non-literal-require': 'error',
+              'security/detect-possible-timing-attacks': 'error',
+              'security/detect-pseudoRandomBytes': 'error',
+              'no-secrets/no-secrets': 'error'
+            }
+          };
+          EOF
+          
+          # Run security linting
+          bun x eslint src/ --config .eslintrc.security.js --format json > eslint-security.json || true
+          
+          # Parse results
+          if [ -f eslint-security.json ]; then
+            ISSUES=$(cat eslint-security.json | jq '[.[].messages[]] | length' 2>/dev/null || echo "0")
+            echo "📊 ESLint Security Issues Found: $ISSUES"
+          fi
+          
+      - name: 📊 Generate Code Analysis Report
+        run: |
+          echo "# 🔬 Static Code Analysis Report" > code-analysis-report.md
+          echo "" >> code-analysis-report.md
+          
+          echo "## 📊 Analysis Summary" >> code-analysis-report.md
+          echo "" >> code-analysis-report.md
+          
+          if [ -f eslint-security.json ]; then
+            ISSUES=$(cat eslint-security.json | jq '[.[].messages[]] | length' 2>/dev/null || echo "0")
+            echo "- **ESLint Security Issues**: $ISSUES" >> code-analysis-report.md
+          fi
+          
+          echo "- **CodeQL Analysis**: ✅ Completed" >> code-analysis-report.md
+          echo "" >> code-analysis-report.md
+          
+          echo "## 🔧 Security Best Practices" >> code-analysis-report.md
+          echo "" >> code-analysis-report.md
+          echo "1. 🔍 Regular static analysis scanning" >> code-analysis-report.md
+          echo "2. 🛡️ Input validation and sanitization" >> code-analysis-report.md
+          echo "3. 🔐 Secure credential management" >> code-analysis-report.md
+          echo "4. 📝 Security-focused code reviews" >> code-analysis-report.md
+          echo "5. 🔄 Automated security testing" >> code-analysis-report.md
+          
+      - name: 📤 Upload Code Analysis Results
+        uses: actions/upload-artifact@v4
+        with:
+          name: code-analysis-results
+          path: |
+            code-analysis-report.md
+            eslint-security.json
+          retention-days: 30
+
+  # 📋 Compliance & Licensing
+  compliance_check:
+    name: 📋 Compliance & Licensing
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    if: |
+      github.event.inputs.scan_type == 'comprehensive' ||
+      github.event.inputs.scan_type == 'compliance' ||
+      github.event.inputs.scan_type == ''
+    
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+        
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          
+      - name: 🥟 Install Bun
+        uses: oven-sh/setup-bun@v1
+        
+      - name: 📦 Install Dependencies
+        run: bun install --frozen-lockfile
+        
+      - name: 📋 License Compliance Check
+        run: |
+          echo "📋 Checking license compliance..."
+          
+          # Install license checker
+          npm install -g license-checker
+          
+          # Generate license report
+          license-checker --json > licenses.json
+          license-checker --csv > licenses.csv
+          
+          # Analyze licenses
+          echo "# 📋 License Compliance Report" > compliance-report.md
+          echo "" >> compliance-report.md
+          
+          # Count licenses by type
+          if [ -f licenses.json ]; then
+            TOTAL_DEPS=$(cat licenses.json | jq 'keys | length' 2>/dev/null || echo "0")
+            echo "- **Total Dependencies**: $TOTAL_DEPS" >> compliance-report.md
+            echo "" >> compliance-report.md
+            
+            # Check for restrictive licenses
+            RESTRICTIVE_LICENSES=("GPL" "AGPL" "LGPL" "SSPL")
+            FOUND_RESTRICTIVE=false
+            
+            for license in "${RESTRICTIVE_LICENSES[@]}"; do
+              COUNT=$(grep -i "$license" licenses.csv | wc -l || echo "0")
+              if [ "$COUNT" -gt 0 ]; then
+                echo "- **$license Licenses**: $COUNT ⚠️" >> compliance-report.md
+                FOUND_RESTRICTIVE=true
+              fi
+            done
+            
+            if [ "$FOUND_RESTRICTIVE" = false ]; then
+              echo "- **License Status**: ✅ No restrictive licenses detected" >> compliance-report.md
+            fi
+          fi
+          
+          echo "" >> compliance-report.md
+          echo "## 🔧 Compliance Recommendations" >> compliance-report.md
+          echo "" >> compliance-report.md
+          echo "1. 📝 Review all dependency licenses" >> compliance-report.md
+          echo "2. 🚫 Avoid GPL/AGPL licenses for commercial use" >> compliance-report.md
+          echo "3. 📋 Maintain license documentation" >> compliance-report.md
+          echo "4. 🔄 Regular license audits" >> compliance-report.md
+          
+      - name: 🔍 Privacy Compliance Check
+        run: |
+          echo "" >> compliance-report.md
+          echo "## 🔒 Privacy Compliance" >> compliance-report.md
+          echo "" >> compliance-report.md
+          
+          # Check for data collection patterns
+          DATA_COLLECTION_PATTERNS=(
+            "analytics"
+            "tracking"
+            "telemetry"
+            "crashlytics"
+            "firebase"
+            "amplitude"
+            "mixpanel"
+          )
+          
+          FOUND_TRACKING=false
+          
+          for pattern in "${DATA_COLLECTION_PATTERNS[@]}"; do
+            RESULTS=$(grep -r -i "$pattern" --include="*.ts" --include="*.tsx" --include="*.js" --include="*.jsx" --exclude-dir=node_modules . | wc -l || echo "0")
+            if [ "$RESULTS" -gt 0 ]; then
+              echo "- **$pattern**: $RESULTS occurrences found" >> compliance-report.md
+              FOUND_TRACKING=true
+            fi
+          done
+          
+          if [ "$FOUND_TRACKING" = false ]; then
+            echo "- **Data Collection**: ✅ No obvious tracking detected" >> compliance-report.md
+          fi
+          
+          echo "" >> compliance-report.md
+          echo "### 📝 Privacy Recommendations" >> compliance-report.md
+          echo "" >> compliance-report.md
+          echo "1. 🔒 Implement privacy-by-design principles" >> compliance-report.md
+          echo "2. 📝 Maintain clear privacy policy" >> compliance-report.md
+          echo "3. 🛡️ Minimize data collection" >> compliance-report.md
+          echo "4. 🔐 Encrypt sensitive data" >> compliance-report.md
+          
+      - name: 📤 Upload Compliance Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: compliance-results
+          path: |
+            compliance-report.md
+            licenses.json
+            licenses.csv
+          retention-days: 30
+
+  # 📊 Security Summary
+  security_summary:
+    name: 📊 Security Summary
+    runs-on: ubuntu-latest
+    needs: [dependency_scan, secrets_scan, code_analysis, compliance_check]
+    if: always()
+    
+    steps:
+      - name: 📥 Download All Security Reports
+        uses: actions/download-artifact@v4
+        
+      - name: 📊 Generate Security Summary
+        run: |
+          echo "# 🔒 Security & Compliance Summary" > security-summary.md
+          echo "" >> security-summary.md
+          echo "## 📊 Scan Results" >> security-summary.md
+          echo "" >> security-summary.md
+          echo "| Category | Status | Details |" >> security-summary.md
+          echo "|----------|--------|---------|" >> security-summary.md
+          echo "| Dependencies | ${{ needs.dependency_scan.result == 'success' && '✅ Scanned' || '❌ Failed' }} | Vulnerability analysis completed |" >> security-summary.md
+          echo "| Secrets | ${{ needs.secrets_scan.result == 'success' && '✅ Scanned' || '❌ Failed' }} | Credential leak detection |" >> security-summary.md
+          echo "| Code Analysis | ${{ needs.code_analysis.result == 'success' && '✅ Analyzed' || '❌ Failed' }} | Static security analysis |" >> security-summary.md
+          echo "| Compliance | ${{ needs.compliance_check.result == 'success' && '✅ Checked' || '❌ Failed' }} | License & privacy compliance |" >> security-summary.md
+          echo "" >> security-summary.md
+          
+          # Overall security score
+          PASSED_SCANS=0
+          TOTAL_SCANS=4
+          
+          [ "${{ needs.dependency_scan.result }}" = "success" ] && PASSED_SCANS=$((PASSED_SCANS + 1))
+          [ "${{ needs.secrets_scan.result }}" = "success" ] && PASSED_SCANS=$((PASSED_SCANS + 1))
+          [ "${{ needs.code_analysis.result }}" = "success" ] && PASSED_SCANS=$((PASSED_SCANS + 1))
+          [ "${{ needs.compliance_check.result }}" = "success" ] && PASSED_SCANS=$((PASSED_SCANS + 1))
+          
+          SCORE=$((PASSED_SCANS * 100 / TOTAL_SCANS))
+          
+          echo "## 🎯 Security Score: ${SCORE}%" >> security-summary.md
+          echo "" >> security-summary.md
+          
+          if [ $SCORE -eq 100 ]; then
+            echo "🎉 **Excellent!** All security scans passed." >> security-summary.md
+          elif [ $SCORE -ge 75 ]; then
+            echo "👍 **Good!** Most security scans passed." >> security-summary.md
+          elif [ $SCORE -ge 50 ]; then
+            echo "⚠️ **Warning!** Some security issues detected." >> security-summary.md
+          else
+            echo "🚨 **Critical!** Multiple security issues found." >> security-summary.md
+          fi
+          
+          echo "" >> security-summary.md
+          echo "## 🔧 Next Steps" >> security-summary.md
+          echo "" >> security-summary.md
+          echo "1. 📝 Review individual scan reports" >> security-summary.md
+          echo "2. 🔧 Address any high-priority issues" >> security-summary.md
+          echo "3. 📋 Update security documentation" >> security-summary.md
+          echo "4. 🔄 Schedule regular security reviews" >> security-summary.md
+          echo "" >> security-summary.md
+          echo "---" >> security-summary.md
+          echo "*Security scan completed on $(date -u +"%Y-%m-%d %H:%M:%S UTC")*" >> security-summary.md
+          
+      - name: 📤 Upload Security Summary
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-summary
+          path: security-summary.md
+          retention-days: 90
+
+      - name: 🚨 Security Alert
+        if: |
+          needs.dependency_scan.result == 'failure' ||
+          needs.secrets_scan.result == 'failure' ||
+          needs.code_analysis.result == 'failure' ||
+          needs.compliance_check.result == 'failure'
+        run: |
+          echo "🚨 Security issues detected!"
+          echo "Please review the security reports and address any critical vulnerabilities."
+          
+          # In a real setup, this could send alerts to Slack, email, etc.
+          exit 1

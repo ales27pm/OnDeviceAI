@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+  <dict>
+    <key>CADisableMinimumFrameDurationOnPhone</key>
+    <true/>
+    <key>CFBundleDevelopmentRegion</key>
+    <string>$(DEVELOPMENT_LANGUAGE)</string>
+    <key>CFBundleDisplayName</key>
+    <string>OnDeviceAI</string>
+    <key>CFBundleExecutable</key>
+    <string>$(EXECUTABLE_NAME)</string>
+    <key>CFBundleIdentifier</key>
+    <string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+    <key>CFBundleInfoDictionaryVersion</key>
+    <string>6.0</string>
+    <key>CFBundleName</key>
+    <string>$(PRODUCT_NAME)</string>
+    <key>CFBundlePackageType</key>
+    <string>$(PRODUCT_BUNDLE_PACKAGE_TYPE)</string>
+    <key>CFBundleShortVersionString</key>
+    <string>1.0.0</string>
+    <key>CFBundleSignature</key>
+    <string>????</string>
+    <key>CFBundleURLTypes</key>
+    <array>
+      <dict>
+        <key>CFBundleURLSchemes</key>
+        <array>
+          <string>ondeviceai</string>
+          <string>com.ondeviceai.app</string>
+        </array>
+      </dict>
+      <dict>
+        <key>CFBundleURLSchemes</key>
+        <array>
+          <string>exp+ondeviceai</string>
+        </array>
+      </dict>
+    </array>
+    <key>CFBundleVersion</key>
+    <string>1</string>
+    <key>LSApplicationCategoryType</key>
+    <string>public.app-category.productivity</string>
+    <key>LSMinimumSystemVersion</key>
+    <string>12.0</string>
+    <key>LSRequiresIPhoneOS</key>
+    <true/>
+    <key>NSAppTransportSecurity</key>
+    <dict>
+      <key>NSAllowsArbitraryLoads</key>
+      <false/>
+      <key>NSAllowsLocalNetworking</key>
+      <true/>
+    </dict>
+    <key>NSCalendarsUsageDescription</key>
+    <string>OnDeviceAI needs calendar access to schedule events and manage your appointments through intelligent conversation. All processing happens locally on your device for privacy.</string>
+    <key>NSCameraUsageDescription</key>
+    <string>OnDeviceAI can use the camera to take photos and assist with visual tasks when requested.</string>
+    <key>NSContactsUsageDescription</key>
+    <string>OnDeviceAI needs contacts access to find people when scheduling meetings and events through conversation. Contact information is processed entirely on-device.</string>
+    <key>NSFaceIDUsageDescription</key>
+    <string>OnDeviceAI can use Face ID for secure authentication when accessing sensitive information.</string>
+    <key>NSLocationWhenInUseUsageDescription</key>
+    <string>OnDeviceAI uses location to provide context-aware assistance and location-based reminders.</string>
+    <key>NSMicrophoneUsageDescription</key>
+    <string>OnDeviceAI uses microphone access for intelligent voice conversations and commands. All voice processing occurs locally on your device using iOS Speech Recognition for maximum privacy and security.</string>
+    <key>NSPhotoLibraryUsageDescription</key>
+    <string>OnDeviceAI can access photos to help you organize and find images through intelligent conversation.</string>
+    <key>NSPrivacyTracking</key>
+    <false/>
+    <key>NSPrivacyTrackingDomains</key>
+    <array/>
+    <key>NSRemindersUsageDescription</key>
+    <string>OnDeviceAI can create and manage reminders to help you stay organized through natural conversation.</string>
+    <key>NSSpeechRecognitionUsageDescription</key>
+    <string>OnDeviceAI uses speech recognition to understand your voice commands and enable natural conversation with the AI assistant. Speech processing happens entirely on-device for privacy and performance.</string>
+    <key>UILaunchStoryboardName</key>
+    <string>SplashScreen</string>
+    <key>UIRequiredDeviceCapabilities</key>
+    <array>
+      <string>arm64</string>
+    </array>
+    <key>UIRequiresFullScreen</key>
+    <false/>
+    <key>UIStatusBarStyle</key>
+    <string>UIStatusBarStyleDefault</string>
+    <key>UISupportedInterfaceOrientations</key>
+    <array>
+      <string>UIInterfaceOrientationPortrait</string>
+      <string>UIInterfaceOrientationPortraitUpsideDown</string>
+    </array>
+    <key>UISupportedInterfaceOrientations~ipad</key>
+    <array>
+      <string>UIInterfaceOrientationPortrait</string>
+      <string>UIInterfaceOrientationPortraitUpsideDown</string>
+      <string>UIInterfaceOrientationLandscapeLeft</string>
+      <string>UIInterfaceOrientationLandscapeRight</string>
+    </array>
+    <key>UIUserInterfaceStyle</key>
+    <string>Light</string>
+    <key>UIViewControllerBasedStatusBarAppearance</key>
+    <false/>
+  </dict>
+</plist>
